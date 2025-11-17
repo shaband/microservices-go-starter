@@ -1,31 +1,52 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"net/http"
-
-	"ride-sharing/shared/env"
-)
-
-var (
-	httpAddr = env.GetString("HTTP_ADDR", ":8083")
+	"os"
+	"os/signal"
+	h "ride-sharing/services/trip-service/internal/infrastructure/http"
+	"ride-sharing/services/trip-service/internal/infrastructure/repository"
+	"ride-sharing/services/trip-service/internal/service"
+	"syscall"
+	"time"
 )
 
 func main() {
-
-	log.Println("Starting Trip Service...")
+	inmemRepo := repository.NewInmemRepository()
+	svc := service.NewService(inmemRepo)
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /preview", handleTripPreview)
+	httphandler := h.HttpHandler{Service: svc}
+
+	mux.HandleFunc("POST /preview", httphandler.HandleTripPreview)
+
 	server := &http.Server{
-		Addr:    httpAddr,
+		Addr:    ":8083",
 		Handler: mux,
 	}
-	log.Printf("Trip Service is listening on %s", httpAddr)
-	if err := server.ListenAndServe(); err != nil {
-		log.Printf("Failed to start server: %v", err)
-	}
-	fmt.Printf("server started on %v", httpAddr)
 
+	errChannel := make(chan error, 1)
+	go func() {
+		errChannel <- server.ListenAndServe()
+		log.Printf("Trip Service is running on http://0.0.0.0.0:", server.Addr)
+	}()
+
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+	select {
+	case err := <-errChannel:
+		log.Fatalf("could not start server: %v", err)
+
+	case sig := <-shutdown:
+		log.Printf("shutting down server... reason: %v", sig)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := server.Shutdown(ctx); err != nil {
+			log.Fatalf("could not gracefully shutdown the server: %v", err)
+		}
+		log.Printf("server stopped Successfully")
+
+	}
 }

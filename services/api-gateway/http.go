@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"ride-sharing/shared/contracts"
+	"ride-sharing/shared/types"
+	"time"
 )
 
 func handleTripPreview(w http.ResponseWriter, r *http.Request) {
@@ -27,16 +28,16 @@ func handleTripPreview(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode request", http.StatusInternalServerError)
 		return
 	}
-
+	time.Sleep(9 * time.Second)
 	TripResponse, err := http.Post("http://trip-service:8083/preview", "application/json", bytes.NewReader(bodyBytes))
 	if err != nil {
 		http.Error(w, "Failed to communicate with trip service", http.StatusInternalServerError)
 		return
 	}
 	defer TripResponse.Body.Close()
-
-	var response contracts.APIResponse
-	if err := json.NewDecoder(TripResponse.Body).Decode(&response); err != nil {
+	var response types.OsrmRespBody
+	err = json.NewDecoder(TripResponse.Body).Decode(&response)
+	if err != nil {
 		http.Error(w, "Invalid response from trip service", http.StatusInternalServerError)
 		return
 	}

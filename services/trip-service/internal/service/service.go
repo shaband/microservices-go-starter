@@ -2,6 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"ride-sharing/services/trip-service/internal/domain"
 	"ride-sharing/shared/types"
 
@@ -36,4 +40,24 @@ func (s *service) CreateRoute(ctx context.Context) (*types.Route, error) {
 	}
 
 	return t, nil
+}
+func (s *service) GetRoute(ctx context.Context, pickup types.Coordinate, destination types.Coordinate) (*types.OsrmRespBody, error) {
+	url := fmt.Sprintf("http://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson",
+		pickup.Longitude,
+		pickup.Latitude,
+		destination.Longitude,
+		destination.Latitude,
+	)
+	res, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get route from OSRM: %w", err)
+	}
+	data, err := io.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read OSRM response body: %w", err)
+	}
+	var osrmResp types.OsrmRespBody
+	json.Unmarshal(data, &osrmResp)
+	return &osrmResp, nil
 }
