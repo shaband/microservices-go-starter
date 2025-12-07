@@ -11,16 +11,16 @@ type previewTripRequest struct {
 	Destination types.Coordinate `json:"destination"`
 }
 
-func (preview previewTripRequest) ToProto() *pb.PreviewTripRequest {
+func (p *previewTripRequest) toProto() *pb.PreviewTripRequest {
 	return &pb.PreviewTripRequest{
-		UserID: preview.UserID,
+		UserID: p.UserID,
 		StartLocation: &pb.Coordinate{
-			Latitude:  preview.Pickup.Latitude,
-			Longitude: preview.Pickup.Longitude,
+			Latitude:  p.Pickup.Latitude,
+			Longitude: p.Pickup.Longitude,
 		},
 		EndLocation: &pb.Coordinate{
-			Latitude:  preview.Destination.Latitude,
-			Longitude: preview.Destination.Longitude,
+			Latitude:  p.Destination.Latitude,
+			Longitude: p.Destination.Longitude,
 		},
 	}
 }

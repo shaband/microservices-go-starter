@@ -2,7 +2,7 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"ride-sharing/services/trip-service/internal/domain"
 	"ride-sharing/shared/types"
@@ -25,10 +25,13 @@ func (s *HttpHandler) HandleTripPreview(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	t, err := s.Service.GetRoute(r.Context(), reqBody.Pickup, reqBody.Destination)
+	ctx := r.Context()
+
+	t, err := s.Service.GetRoute(ctx, &reqBody.Pickup, &reqBody.Destination)
 	if err != nil {
-		fmt.Println("Error fetching route:", err)
+		log.Println(err)
 	}
+
 	writeJSON(w, http.StatusOK, t)
 }
 

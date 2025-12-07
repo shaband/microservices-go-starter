@@ -33,32 +33,29 @@ func (s *service) CreateTrip(ctx context.Context, fare *domain.RideFareModel) (*
 
 	return s.repo.CreateTrip(ctx, t)
 }
-func (s *service) CreateRoute(ctx context.Context) (*types.Route, error) {
-	t := &types.Route{
-		Distance: 100,
-		Duration: 13,
-		Geometry: []*types.Geometry{},
+
+func (s *service) GetRoute(ctx context.Context, pickup, destination *types.Coordinate) (*tripTypes.OsrmApiResponse, error) {
+	url := fmt.Sprintf(
+		"http://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson",
+		pickup.Longitude, pickup.Latitude,
+		destination.Longitude, destination.Latitude,
+	)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch route from OSRM API: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the response: %v", err)
 	}
 
-	return t, nil
-}
-func (s *service) GetRoute(ctx context.Context, pickup types.Coordinate, destination types.Coordinate) (*tripTypes.OsrmRespBody, error) {
-	url := fmt.Sprintf("http://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson",
-		pickup.Longitude,
-		pickup.Latitude,
-		destination.Longitude,
-		destination.Latitude,
-	)
-	res, err := http.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get route from OSRM: %w", err)
+	var routeResp tripTypes.OsrmApiResponse
+	if err := json.Unmarshal(body, &routeResp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %v", err)
 	}
-	data, err := io.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read OSRM response body: %w", err)
-	}
-	var osrmResp tripTypes.OsrmRespBody
-	json.Unmarshal(data, &osrmResp)
-	return &osrmResp, nil
+
+	return &routeResp, nil
 }

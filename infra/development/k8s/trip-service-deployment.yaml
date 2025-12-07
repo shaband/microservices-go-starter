@@ -24,13 +24,6 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "200m"
-            env:
-            # Accessing an env variable from the app-config config map
-            - name: TRIP_HTTP_ADDR
-              valueFrom:
-                configMapKeyRef:
-                  key: TRIP_HTTP_ADDR
-                  name: app-config
 ---
 apiVersion: v1
 kind: Service

@@ -1,8 +1,6 @@
 package domain
 
-import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
-)
+import "go.mongodb.org/mongo-driver/bson/primitive"
 
 type RideFareModel struct {
 	ID                primitive.ObjectID
@@ -10,5 +8,3 @@ type RideFareModel struct {
 	PackageSlug       string // ex: van, luxury, sedan
 	TotalPriceInCents float64
 }
-
-

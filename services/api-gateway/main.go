@@ -20,32 +20,39 @@ func main() {
 	log.Println("Starting API Gateway")
 
 	mux := http.NewServeMux()
+
 	mux.HandleFunc("POST /trip/preview", enableCORS(handleTripPreview))
 	mux.HandleFunc("/ws/drivers", handleDriversWebSocket)
 	mux.HandleFunc("/ws/riders", handleRidersWebSocket)
+
 	server := &http.Server{
 		Addr:    httpAddr,
 		Handler: mux,
 	}
-	errChannel := make(chan error, 1)
+
+	serverErrors := make(chan error, 1)
+
 	go func() {
-		errChannel <- server.ListenAndServe()
-		log.Printf("API Gateway is running on http://0.0.0.0:%v", httpAddr)
+		log.Printf("Server listening on %s", httpAddr)
+		serverErrors <- server.ListenAndServe()
 	}()
-	shotDown := make(chan os.Signal, 1)
-	signal.Notify(shotDown, os.Interrupt, syscall.SIGTERM)
+
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
 	select {
+	case err := <-serverErrors:
+		log.Printf("Error starting the server: %v", err)
 
-	case err := <-errChannel:
-		log.Fatalf("Could not start API Gateway: %v", err)
-	case sig := <-shotDown:
-		log.Printf("Shutting down API Gateway... Reason: %v", sig)
+	case sig := <-shutdown:
+		log.Printf("Server is shutting down due to %v signal", sig)
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
 		if err := server.Shutdown(ctx); err != nil {
-			log.Fatalf("Could not gracefully shutdown the server: %v", err)
+			log.Printf("Could not stop the server gracefully: %v", err)
+			server.Close()
 		}
-		log.Println("API Gateway stopped")
 	}
 }

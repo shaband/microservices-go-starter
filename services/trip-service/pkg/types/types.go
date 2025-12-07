@@ -1,33 +1,28 @@
-package pkg
+package types
 
-import (
-	pb "ride-sharing/shared/proto/trip"
-)
+import pb "ride-sharing/shared/proto/trip"
 
-type OsrmRespBody struct {
+type OsrmApiResponse struct {
 	Routes []struct {
-		Weight float64 `json:"weight"`
-
 		Distance float64 `json:"distance"`
+		Duration float64 `json:"duration"`
 		Geometry struct {
 			Coordinates [][]float64 `json:"coordinates"`
 		} `json:"geometry"`
 	} `json:"routes"`
 }
 
-func (orsm *OsrmRespBody) ToProto() *pb.Route {
-
-	route := orsm.Routes[0]
+func (o *OsrmApiResponse) ToProto() *pb.Route {
+	route := o.Routes[0]
 	geometry := route.Geometry.Coordinates
-
-	coordinates := make([]*pb.Coordinate, len(route.Geometry.Coordinates))
-
+	coordinates := make([]*pb.Coordinate, len(geometry))
 	for i, coord := range geometry {
 		coordinates[i] = &pb.Coordinate{
-			Longitude: coord[0],
-			Latitude:  coord[1],
+			Latitude:  coord[0],
+			Longitude: coord[1],
 		}
 	}
+
 	return &pb.Route{
 		Geometry: []*pb.Geometry{
 			{
@@ -35,7 +30,6 @@ func (orsm *OsrmRespBody) ToProto() *pb.Route {
 			},
 		},
 		Distance: route.Distance,
-		Duration: route.Weight,
+		Duration: route.Duration,
 	}
-
 }

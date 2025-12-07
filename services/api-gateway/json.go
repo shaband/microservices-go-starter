@@ -5,8 +5,8 @@ import (
 	"net/http"
 )
 
-func writeJsonResponse(w http.ResponseWriter, statusCode int, data any) {
+func writeJSON(w http.ResponseWriter, status int, data any) error {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(data)
+	w.WriteHeader(status)
+	return json.NewEncoder(w).Encode(data)
 }
