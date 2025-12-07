@@ -1,15 +1,13 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"ride-sharing/services/api-gateway/grpc_clients"
-	"ride-sharing/shared/types"
 
-	pb "ride-sharing/shared/proto/trip"
+	// pb "ride-sharing/shared/proto/trip"
 
 	"github.com/gorilla/websocket"
 )
@@ -22,7 +20,7 @@ var upgrader = websocket.Upgrader{
 
 func handleTripPreview(w http.ResponseWriter, r *http.Request) {
 
-	var reqBody pb.PreviewTripRequest
+	var reqBody previewTripRequest
 
 	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
@@ -33,14 +31,6 @@ func handleTripPreview(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "UserID is required", http.StatusBadRequest)
 		return
 	}
-
-	// Marshal the parsed request body and send that to the trip service
-	bodyBytes, err := json.Marshal(&reqBody)
-	if err != nil {
-		http.Error(w, "Failed to encode request", http.StatusInternalServerError)
-		return
-	}
-
 	tripServiceClient, err := grpc_clients.NewTripServiceClient()
 	if err != nil {
 		http.Error(w, "Failed to create trip service client", http.StatusInternalServerError)
@@ -48,18 +38,10 @@ func handleTripPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer tripServiceClient.Close()
-	tripServiceClient.Client.PreviewTrip(r.Context(), &reqBody)
-
-	TripResponse, err := http.Post("http://trip-service:8083/preview", "application/json", bytes.NewReader(bodyBytes))
+	response, err := tripServiceClient.Client.PreviewTrip(r.Context(), reqBody.ToProto())
 	if err != nil {
-		http.Error(w, "Failed to communicate with trip service", http.StatusInternalServerError)
-		return
-	}
-	defer TripResponse.Body.Close()
-	var response types.OsrmRespBody
-	err = json.NewDecoder(TripResponse.Body).Decode(&response)
-	if err != nil {
-		http.Error(w, "Invalid response from trip service", http.StatusInternalServerError)
+		log.Printf("Error previewing trip: %v", err)
+		http.Error(w, "Failed to preview trip", http.StatusInternalServerError)
 		return
 	}
 	writeJsonResponse(w, http.StatusOK, response)

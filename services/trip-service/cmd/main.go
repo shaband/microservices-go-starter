@@ -3,50 +3,47 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
+	"net"
 	"os"
 	"os/signal"
-	h "ride-sharing/services/trip-service/internal/infrastructure/http"
+	"ride-sharing/services/trip-service/internal/infrastructure/grpc"
 	"ride-sharing/services/trip-service/internal/infrastructure/repository"
 	"ride-sharing/services/trip-service/internal/service"
 	"syscall"
-	"time"
+
+	grcpsServer "google.golang.org/grpc"
 )
+
+var GrpcAddr = ":9093"
 
 func main() {
 	inmemRepo := repository.NewInmemRepository()
 	svc := service.NewService(inmemRepo)
-	mux := http.NewServeMux()
+	ctx, cancel := context.WithCancel(context.Background())
 
-	httphandler := h.HttpHandler{Service: svc}
-
-	mux.HandleFunc("POST /preview", httphandler.HandleTripPreview)
-
-	server := &http.Server{
-		Addr:    ":8083",
-		Handler: mux,
-	}
-
-	errChannel := make(chan error, 1)
+	defer cancel()
 	go func() {
-		errChannel <- server.ListenAndServe()
-		log.Printf("Trip Service is running on http://0.0.0.0.0:", server.Addr)
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+		<-sigChan
+		cancel()
 	}()
+	Listener, err := net.Listen("tcp", GrpcAddr)
 
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
-	select {
-	case err := <-errChannel:
+	if err != nil {
 		log.Fatalf("could not start server: %v", err)
-
-	case sig := <-shutdown:
-		log.Printf("shutting down server... reason: %v", sig)
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := server.Shutdown(ctx); err != nil {
-			log.Fatalf("could not gracefully shutdown the server: %v", err)
-		}
-		log.Printf("server stopped Successfully")
-
 	}
+	server := grcpsServer.NewServer()
+	grpc.RegisterTripHandler(server, svc)
+	go func() {
+		if err := server.Serve(Listener); err != nil {
+			log.Fatalf("could not start server: %v", err)
+		}
+	}()
+	ctx.Done()
+	log.Printf("shutting down server...")
+
+	server.GracefulStop()
+	log.Printf("server stopped Successfully")
+
 }

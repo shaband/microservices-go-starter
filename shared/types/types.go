@@ -15,13 +15,13 @@ type Coordinate struct {
 	Longitude float64 `json:"longitude"`
 }
 
-type OsrmRespBody struct {
-	Routes []struct {
-		Weight float64 `json:"weight"`
+// type OsrmRespBody struct {
+// 	Routes []struct {
+// 		Weight float64 `json:"weight"`
 
-		Distance float64 `json:"distance"`
-		Geometry struct {
-			Coordinates [][]float64 `json:"coordinates"`
-		} `json:"geometry"`
-	} `json:"routes"`
-}
+// 		Distance float64 `json:"distance"`
+// 		Geometry struct {
+// 			Coordinates [][]float64 `json:"coordinates"`
+// 		} `json:"geometry"`
+// 	} `json:"routes"`
+// }

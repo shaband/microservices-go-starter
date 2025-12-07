@@ -19,7 +19,7 @@ message PreviewTripRequest{
 message PreviewTripResponse{
   string tripID = 1;
   Route route = 2;
-  repeated RideShare rideFares = 3;
+  repeated RideFare rideFares = 3;
 }
 
 message Coordinate{
@@ -36,8 +36,8 @@ message Geometry{
   repeated Coordinate Coordinates = 1;
   
 }
-message RideShare{
-  string ID =1 ;
+message RideFare{
+  string  ID =1 ;
   string	UserID =2;       // ex: van, luxury, sedan
   double	TotalPriceInCents=3 ;
 }
